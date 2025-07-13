@@ -8,5 +8,4 @@ const checkRole = (allowedRoles) => {
     next();
   };
 };
-
-module.exports = checkRole;
+export default checkRole;

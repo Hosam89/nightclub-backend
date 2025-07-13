@@ -1,67 +1,85 @@
-const { readEvents, writeEvents } = require("../utils/fileDB");
-const { v4: uuidv4 } = require("uuid");
+import Event from "../models/event.js";
+import {
+  CreateEventDto,
+  UpdateEventDto,
+  EventResponseDto,
+} from "../dto/event.dto.js";
+
+// Generate slug from title
+function generateSlug(title) {
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^\w\-]+/g, "")
+    .replace(/\-\-+/g, "-");
+}
 
 // Create
-exports.createEvent = (req, res, next) => {
+export async function createEvent(req, res, next) {
   try {
-    const events = readEvents();
-    const newEvent = { id: uuidv4(), ...req.body };
-    events.push(newEvent);
-    writeEvents(events);
-    res.status(201).json(newEvent);
+    const eventDto = new CreateEventDto(req.body);
+    eventDto.slug = eventDto.slug || generateSlug(eventDto.title);
+    const event = new Event(eventDto.toModel());
+    await event.save();
+    res.status(201).json(new EventResponseDto(event));
   } catch (err) {
+    if (err.code === 11000 && err.keyPattern?.slug) {
+      return res.status(400).json({ message: "Slug must be unique" });
+    }
     next(err);
   }
-};
+}
 
 // Read All
-exports.getEvents = (req, res, next) => {
+export async function getEvents(req, res, next) {
   try {
-    const events = readEvents();
-    res.status(200).json(events);
+    const events = await Event.find();
+    const eventDtos = events.map((event) => new EventResponseDto(event));
+    res.status(200).json(eventDtos);
   } catch (err) {
     next(err);
   }
-};
+}
 
-// Read One
-exports.getEventById = (req, res, next) => {
+// Read One by ID
+export async function getEventById(req, res, next) {
   try {
-    const events = readEvents();
-    const event = events.find((e) => e.id === req.params.id);
+    const event = await Event.findById(req.params.id);
     if (!event) return res.status(404).json({ message: "Event not found" });
-    res.status(200).json(event);
+    res.status(200).json(new EventResponseDto(event));
   } catch (err) {
     next(err);
   }
-};
+}
 
 // Update
-exports.updateEvent = (req, res, next) => {
+export async function updateEvent(req, res, next) {
   try {
-    const events = readEvents();
-    const index = events.findIndex((e) => e.id === req.params.id);
-    if (index === -1)
-      return res.status(404).json({ message: "Event not found" });
-    events[index] = { ...events[index], ...req.body };
-    writeEvents(events);
-    res.status(200).json(events[index]);
+    const updateDto = new UpdateEventDto(req.body);
+    if (updateDto.title && !updateDto.slug) {
+      updateDto.slug = generateSlug(updateDto.title);
+    }
+
+    const event = await Event.findByIdAndUpdate(req.params.id, updateDto, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!event) return res.status(404).json({ message: "Event not found" });
+    res.status(200).json(new EventResponseDto(event));
   } catch (err) {
     next(err);
   }
-};
+}
 
 // Delete
-exports.deleteEvent = (req, res, next) => {
+export async function deleteEvent(req, res, next) {
   try {
-    let events = readEvents();
-    const index = events.findIndex((e) => e.id === req.params.id);
-    if (index === -1)
-      return res.status(404).json({ message: "Event not found" });
-    const deleted = events.splice(index, 1);
-    writeEvents(events);
-    res.status(200).json(deleted[0]);
+    const event = await Event.findByIdAndDelete(req.params.id);
+    if (!event) return res.status(404).json({ message: "Event not found" });
+    res.status(200).json(new EventResponseDto(event));
   } catch (err) {
     next(err);
   }
-};
+}
