@@ -19,7 +19,7 @@ app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://www.postman.com"],
+    origin: ["http://localhost:5173/*", "https://www.postman.com"],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
