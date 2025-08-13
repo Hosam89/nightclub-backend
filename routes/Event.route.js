@@ -1,8 +1,7 @@
 import express from "express";
 import validateApiKey from "../middleware/apiKeyMiddleware.js";
 import checkRole from "../middleware/checkRole.js";
-import * as eventController from "../controllers/eventController.js";
-
+import * as eventController from "../controllers/event.controller.js";
 const router = express.Router();
 
 router.use(validateApiKey);

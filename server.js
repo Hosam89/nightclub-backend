@@ -4,9 +4,11 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import mongoose from "mongoose";
-import eventRoutes from "./routes/eventRoutes.js";
 import errorHandler from "./middleware/errorHandler.js";
 import dotenv from "dotenv";
+import eventRoutes from "./routes/Event.route.js";
+import reservationRoutes from "./routes/Reservation.route.js";
+
 dotenv.config();
 const app = express();
 
@@ -57,7 +59,7 @@ app.disable("x-powered-by");
 
 // Routes
 app.use("/api/events", eventRoutes);
-
+app.use("/api/reservations", reservationRoutes);
 // Error handling
 app.use(errorHandler);
 
