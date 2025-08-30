@@ -10,11 +10,10 @@ import {
   UpdateReservationDto,
   CheckAvailabilityDto,
 } from "../dto/reservation.dto.js";
-
-import validateApiKey from "../middleware/apiKeyMiddleware.js";
+import requireAuth from "../middleware/requireAuth.js";
 import checkRole from "../middleware/checkRole.js";
 const router = express.Router();
-router.use(validateApiKey);
+router.use(requireAuth);
 // Public
 router.post("/", CreateReservationDto, createReservation);
 router.get(

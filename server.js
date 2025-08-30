@@ -8,6 +8,8 @@ import errorHandler from "./middleware/errorHandler.js";
 import dotenv from "dotenv";
 import eventRoutes from "./routes/Event.route.js";
 import reservationRoutes from "./routes/Reservation.route.js";
+import authRoutes from "./routes/auth.routes.js";
+import session from "express-session";
 
 dotenv.config();
 const app = express();
@@ -18,7 +20,14 @@ app.use(morgan("dev"));
 app.use(helmet());
 
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
-
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: false, httpOnly: true },
+  })
+);
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -58,6 +67,7 @@ connect();
 app.disable("x-powered-by");
 
 // Routes
+app.use("/api/auth", authRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/reservations", reservationRoutes);
 // Error handling

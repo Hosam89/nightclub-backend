@@ -1,12 +1,14 @@
 import express from "express";
-import validateApiKey from "../middleware/apiKeyMiddleware.js";
+import requireAuth from "../middleware/requireAuth.js";
 import checkRole from "../middleware/checkRole.js";
 import * as eventController from "../controllers/event.controller.js";
+
 const router = express.Router();
 
-router.use(validateApiKey);
+// Protect everything with login
+router.use(requireAuth);
 
-// Public routes
+// Public routes (requires at least "read" role)
 router.get("/", checkRole(["read", "admin"]), eventController.getEvents);
 router.get("/:id", checkRole(["read", "admin"]), eventController.getEventById);
 
