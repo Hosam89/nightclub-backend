@@ -1,4 +1,4 @@
-import Event from "../models/Event.js";
+import Event from "../models/Event.model.js";
 import Reservation from "../models/Reservation.model.js";
 import { validationResult } from "express-validator";
 
