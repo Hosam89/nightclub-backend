@@ -10,16 +10,31 @@ import eventRoutes from "./routes/Event.route.js";
 import reservationRoutes from "./routes/Reservation.route.js";
 import authRoutes from "./routes/auth.routes.js";
 import session from "express-session";
+import path from "path";
+import { dirname } from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 const app = express();
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// Middleware
+// ----- Middleware ----- //
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
-app.use(helmet());
 
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
+// Helmet security
+// Disable Cross-Origin-Resource-Policy globally to allow images from other origins
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  })
+);
+
+// Rate limiter
+// app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
+
+// Session middleware
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
@@ -28,29 +43,33 @@ app.use(
     cookie: { secure: false, httpOnly: true },
   })
 );
+
+// ----- API CORS ----- //
 app.use(
+  "/api",
   cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (mobile apps, Postman, etc.)
-      if (!origin) return callback(null, true);
-
-      const allowedOrigins = [
-        "http://localhost:5173",
-        "https://www.postman.com",
-      ];
-
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "x-api-key"],
+    origin: ["http://localhost:5173", "https://www.postman.com"],
+    credentials: true,
   })
 );
 
-// MongoDB connection
+// ----- Public folder ----- //
+app.use(express.static("public"));
+
+// ----- Static images folder ----- //
+
+app.use(
+  "/eventsImages",
+  cors({ origin: "*" }),
+  express.static(path.join(__dirname, "eventsImages"))
+);
+
+app.use("/eventsImages", (req, res, next) => {
+  res.removeHeader("Cross-Origin-Resource-Policy");
+  next();
+});
+
+// ----- MongoDB connection ----- //
 async function connect() {
   try {
     mongoose.connection.on("connected", () => console.log("✅ DB connected"));
@@ -64,15 +83,17 @@ async function connect() {
 }
 connect();
 
+// ----- Disable x-powered-by header ----- //
 app.disable("x-powered-by");
 
-// Routes
+// ----- Routes ----- //
 app.use("/api/auth", authRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/reservations", reservationRoutes);
+
 // Error handling
 app.use(errorHandler);
 
-// Server
+// ----- Start Server ----- //
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

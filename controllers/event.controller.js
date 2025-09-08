@@ -4,8 +4,18 @@ import {
   UpdateEventDto,
   EventResponseDto,
 } from "../dto/event.dto.js";
+import fs from "fs";
+import path from "path";
 
-// Generate slug from title
+// Paths
+const imagesDir = path.resolve("public/eventsImages");
+
+// Ensure directory exists
+if (!fs.existsSync(imagesDir)) {
+  fs.mkdirSync(imagesDir, { recursive: true });
+}
+
+// Utility: generate slug from title
 function generateSlug(title) {
   return title
     .toLowerCase()
@@ -15,13 +25,33 @@ function generateSlug(title) {
     .replace(/\-\-+/g, "-");
 }
 
+// Utility: remove an image safely
+function removeImage(imagePath) {
+  if (!imagePath) return;
+  const fullPath = path.resolve("public", imagePath.replace(/^\//, ""));
+  if (fs.existsSync(fullPath)) {
+    fs.unlinkSync(fullPath);
+  }
+}
+
 // Create
 export async function createEvent(req, res, next) {
   try {
     const eventDto = new CreateEventDto(req.body);
     eventDto.slug = eventDto.slug || generateSlug(eventDto.title);
+
     const event = new Event(eventDto.toModel());
+
+    if (req.file) {
+      const ext = path.extname(req.file.originalname) || ".jpg";
+      const destPath = path.join(imagesDir, `${event._id}${ext}`);
+      fs.renameSync(req.file.path, destPath);
+
+      event.image = `/eventsImages/${event._id}${ext}`;
+    }
+
     await event.save();
+
     res.status(201).json(new EventResponseDto(event));
   } catch (err) {
     if (err.code === 11000 && err.keyPattern?.slug) {
@@ -61,12 +91,25 @@ export async function updateEvent(req, res, next) {
       updateDto.slug = generateSlug(updateDto.title);
     }
 
-    const event = await Event.findByIdAndUpdate(req.params.id, updateDto, {
+    let event = await Event.findById(req.params.id);
+    if (!event) return res.status(404).json({ message: "Event not found" });
+
+    // If new image uploaded, remove old and save new
+    if (req.file) {
+      removeImage(event.imagePath);
+
+      const ext = path.extname(req.file.originalname) || ".jpg";
+      const destPath = path.join(imagesDir, `${event._id}${ext}`);
+      fs.renameSync(req.file.path, destPath);
+
+      updateDto.image = `/eventsImages/${event._id}${ext}`;
+    }
+
+    event = await Event.findByIdAndUpdate(req.params.id, updateDto, {
       new: true,
       runValidators: true,
     });
 
-    if (!event) return res.status(404).json({ message: "Event not found" });
     res.status(200).json(new EventResponseDto(event));
   } catch (err) {
     next(err);
@@ -78,6 +121,9 @@ export async function deleteEvent(req, res, next) {
   try {
     const event = await Event.findByIdAndDelete(req.params.id);
     if (!event) return res.status(404).json({ message: "Event not found" });
+
+    removeImage(event.imagePath);
+
     res.status(200).json(new EventResponseDto(event));
   } catch (err) {
     next(err);

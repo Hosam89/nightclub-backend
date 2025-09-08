@@ -5,5 +5,10 @@ const router = express.Router();
 
 router.post("/login", login);
 router.post("/logout", logout);
-
+router.get("/me", (req, res) => {
+  if (req.session.user) {
+    return res.json(req.session.user);
+  }
+  return res.json({ role: "read" });
+});
 export default router;
