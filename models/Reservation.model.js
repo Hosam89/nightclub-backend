@@ -15,6 +15,10 @@ const reservationSchema = new Schema({
   user: {
     fullname: { type: String, required: true },
     email: { type: String, required: true },
+    phoneNumber: {
+      type: mongoose.Schema.Types.Number,
+      required: true,
+    },
   },
 
   eventID: {
@@ -57,6 +61,7 @@ reservationSchema.statics.getReservedSeats = async function (eventId) {
   return reservations.flatMap((res) => res.seats);
 };
 
+reservationSchema.index({ eventID: 1, seats: 1 }, { unique: true });
 const Reservation = mongoose.model("Reservation", reservationSchema);
 
 export default Reservation;

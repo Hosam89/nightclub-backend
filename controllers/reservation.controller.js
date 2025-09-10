@@ -8,6 +8,7 @@ export const getEventReservations = async (req, res) => {
     const reservations = await Reservation.find({ eventID: eventId }).select(
       "reservationCode user seats status createdAt"
     );
+    if (!reservations) return [];
     res.json(reservations);
   } catch (error) {
     console.error(error);
@@ -22,7 +23,7 @@ export const createReservation = async (req, res, next) => {
     if (!errors.isEmpty())
       return res.status(400).json({ success: false, errors: errors.array() });
 
-    const { eventID, fullname, email, seats } = req.body;
+    const { eventID, fullname, email, seats, phoneNumber } = req.body;
 
     const event = await Event.findById(eventID);
     if (!event || !event.isActive)
@@ -35,10 +36,28 @@ export const createReservation = async (req, res, next) => {
         .status(400)
         .json({ success: false, message: "Event already passed" });
 
+    // Find already reserved seats for this event
+    const reservedSeatsDocs = await Reservation.find({
+      eventID,
+      status: { $in: ["PENDING", "CONFIRMED"] },
+    }).select("seats");
+
+    const reservedSeats = reservedSeatsDocs.flatMap((r) => r.seats);
+
+    // Check if any requested seat is already taken
+    const conflict = seats.find((seat) => reservedSeats.includes(seat));
+    if (conflict) {
+      return res.status(400).json({
+        success: false,
+        message: `Seat ${conflict} is already taken`,
+      });
+    }
+
+    //Create reservation if seats are free
     const reservation = new Reservation({
       reservationCode: generateCode(),
       eventID,
-      user: { fullname, email },
+      user: { fullname, email, phoneNumber },
       seats,
       status: "PENDING",
       expiresAt: new Date(Date.now() + 15 * 60 * 1000),

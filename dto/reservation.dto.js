@@ -9,6 +9,8 @@ export const CreateReservationDto = [
     .isLength({ min: 2 })
     .withMessage("Full name is required"),
 
+  body("phoneNumber").isNumeric().withMessage("phone number is requierd"),
+
   body("email")
     .isEmail()
     .normalizeEmail()
