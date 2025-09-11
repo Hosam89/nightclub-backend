@@ -13,6 +13,7 @@ import session from "express-session";
 import path from "path";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
+import MongoStore from "connect-mongo";
 
 dotenv.config();
 const app = express();
@@ -31,25 +32,28 @@ app.use(
   })
 );
 
-// Rate limiter
-// app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
-
-// Session middleware
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: { secure: false, httpOnly: true },
-  })
-);
-
 // ----- API CORS ----- //
 app.use(
   "/api",
   cors({
     origin: ["http://localhost:5173", "https://www.postman.com"],
     credentials: true,
+  })
+);
+// Rate limiter
+// app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
+
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI }),
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      sameSite: "lax",
+    },
   })
 );
 
