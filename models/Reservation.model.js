@@ -54,14 +54,20 @@ reservationSchema.methods.generateReservationCode = function () {
 reservationSchema.statics.getReservedSeats = async function (eventId) {
   const reservations = await this.find({
     eventID: eventId,
-    status: { $in: ["PENDING", "CONFIRMED"] },
+    status: { $in: ["CONFIRMED"] },
   }).select("seats");
 
   // Flatten all seat arrays into a single array
   return reservations.flatMap((res) => res.seats);
 };
 
-reservationSchema.index({ eventID: 1, seats: 1 }, { unique: true });
+reservationSchema.index(
+  { eventID: 1, seats: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { status: "CONFIRMED" },
+  }
+);
 const Reservation = mongoose.model("Reservation", reservationSchema);
 
 export default Reservation;

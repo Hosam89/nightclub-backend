@@ -39,7 +39,7 @@ export const createReservation = async (req, res, next) => {
     // Find already reserved seats for this event
     const reservedSeatsDocs = await Reservation.find({
       eventID,
-      status: { $in: ["PENDING", "CONFIRMED"] },
+      status: { $in: ["CONFIRMED"] },
     }).select("seats");
 
     const reservedSeats = reservedSeatsDocs.flatMap((r) => r.seats);
